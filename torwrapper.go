@@ -2,10 +2,12 @@ package main
 
 import (
 	. "./constants"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -19,11 +21,18 @@ func check(err error) {
 	}
 }
 
-// execSh created for convenient command execution
-func execSh(command string) string {
-	stdout, err := exec.Command("sh", "-c", command).Output()
-	check(err)
-	return string(stdout)
+// execSh created for convenient command execution. Returns stdout and err+stderr
+func execSh(command string) (string, string) {
+	cmd := exec.Command("sh", "-c", command)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	errStr := ""
+	if err != nil {
+		errStr = fmt.Sprintln(fmt.Sprint(err) + ": " + stderr.String())
+	}
+	return stdout.String(), errStr
 }
 
 // appendTextIfAbsent created for config editing simplification
@@ -79,13 +88,11 @@ updbridges	Update TOR bridges from the GitHub repo`)
 
 // start launches torwrapper service
 func start() {
-	execSh("sudo systemctl start torwrapper.service")
-}
-
-// startService is being run as 'ExecStart' param in torwrapper service
-func startService() {
 	if !isActive() {
 		// Setting-up configs and back-ups
+		// Launch service for status tracking
+		execSh("sudo systemctl start torwrapper.service")
+
 		// Updating TORRC
 		execSh(BACKUP_TORRC_CMD)
 		addTextIfAbsent("/etc/tor/torrc", TORRC_CONFIG, true)
@@ -93,100 +100,86 @@ func startService() {
 		// Updating resolv.conv for DNS
 		execSh(BACKUP_RESOLV_CONV_CMD)
 		addTextIfAbsent("/etc/resolv.conf", RESOLV_CONV_CONFIG, false)
-		execSh("systemctl restart tor")
+		execSh("sudo /etc/init.d/tor restart")
 
 		// Update firewall
 		execSh(BACKUP_IPTABLES_RULES_CMD)
 		execSh(CLEAR_IPTABLES_RULES)
 		execSh(APPLY_TORWRAPPER_IPTABLES_RULES)
 
-		fmt.Println("Torwrapper service has been started. Connecting to TOR Network.\n" +
-			"If it fails, bridges would be automatically applied\n Please, wait")
+		fmt.Println("Torwrapper service has been started. Connecting to TOR Network " +
+			"- if it fails, bridges would be automatically applied.\nEstimate waiting time - 30 seconds...")
+		time.Sleep(15 * time.Second)
 
-		timeout := time.After(30 * time.Second)
-		done := make(chan bool, 1)
-		loadBar := 0
+		timeout := time.After(15 * time.Second)
+		done := make(chan bool)
+		var isConnected bool
 
 		go func() {
 			for {
 				select {
 				case <-timeout:
 					fmt.Println("Connection timeout achieved (30 seconds)\n" +
-						"Trying to connect with TOR bridges\n Please, wait")
-					done <- true
+						"\nTrying to connect with TOR bridges\nEstimate waiting time - 30 seconds...")
+					done <- false
 				default:
-					if loadBar == 3 {
-						_, err := fmt.Fprint(os.Stdout, "\r \r \r \r \r \r")
-						check(err)
-						loadBar = 0
-					}
-					fmt.Print(".")
-
-					if stdout := execSh(CHECK_TOR_CONNECTION_CMD); stdout != "" {
-						fmt.Printf("Connected successfully with TOR IP address %s\n", stdout)
+					if stdout, _ := execSh(CHECK_TOR_CONNECTION_CMD); stdout != "" {
+						fmt.Printf("\nConnected successfully with TOR IP address %s\n", stdout)
 						done <- true
 						return
 					}
-
-					loadBar++
-					time.Sleep(1 * time.Second)
 				}
+				time.Sleep(1 * time.Second)
 			}
 		}()
-		<-done
+
+		isConnected = <-done
+		if isConnected {
+			return
+		}
 
 		content, err := ioutil.ReadFile("/etc/tor/bridges.txt")
 		check(err)
 		addTextIfAbsent("/etc/tor/torrc", string(content), false)
+		execSh("sudo /etc/init.d/tor restart")
+		time.Sleep(15 * time.Second)
 
-		timeout = time.After(30 * time.Second)
-		done = make(chan bool, 1)
-		loadBar = 0
+		timeout = time.After(15 * time.Second)
+		done = make(chan bool)
 
 		go func() {
 			for {
 				select {
 				case <-timeout:
-					fmt.Println("Connection timeout achieved (30 seconds)\n" +
-						"Try to update bridges with \"torwrapper updbridge\" or " +
+					fmt.Println("\n\nConnection timeout achieved (5 minutes)\n" +
+						"Try to update bridges with \"torwrapper updbridges\" or " +
 						"add them manually in /etc/tor/bridges.txt from https://t.me/GetBridgesBot\n" +
-						"Try to start Torwrapper again")
-					done <- true
+						"Program is terminated. Please, start Torwrapper again")
+					done <- false
 					return
 				default:
-					if loadBar == 3 {
-						_, err := fmt.Fprint(os.Stdout, "\r \r \r \r \r \r")
-						check(err)
-						loadBar = 0
-					}
-					fmt.Print(".")
-
-					if stdout := execSh(CHECK_TOR_CONNECTION_CMD); stdout != "" {
+					if stdout, _ := execSh(CHECK_TOR_CONNECTION_CMD); stdout != "" {
 						fmt.Printf("Connected successfully with TOR IP address %s\n", stdout)
 						done <- true
 						return
 					}
-
-					loadBar++
-					time.Sleep(1 * time.Second)
 				}
+				time.Sleep(1 * time.Second)
 			}
 		}()
 
-		<-done
-
+		isConnected = <-done
+		if !isConnected {
+			// stop the service if failed to connect to the TOR network
+			stop()
+		}
 	} else {
 		fmt.Println("Cannot start already working service")
 	}
 }
 
-// stop kills torwrapper service
+// stop kills torwrapper service and restore configs
 func stop() {
-	execSh("sudo systemctl stop torwrapper.service")
-}
-
-// stopService is being run as 'ExecStop' param in torwrapper service
-func stopService() {
 	if isActive() {
 		execSh(CLEAR_IPTABLES_RULES)
 		execSh(RESTORE_IPTABLE_RULES_CMD)
@@ -194,6 +187,8 @@ func stopService() {
 		execSh(RESTORE_RESOLV_CONV_CMD)
 
 		execSh(RESTORE_TORRC_CMD)
+
+		execSh("sudo systemctl stop torwrapper.service")
 
 		fmt.Println("Torwrapper service has been stopped")
 	} else {
@@ -203,7 +198,7 @@ func stopService() {
 
 // isActive checks if torwrapper service is alive and achievable
 func isActive() bool {
-	if stdout := execSh(`systemctl -a | grep -F 'torwrapper'`); stdout != "" {
+	if stdout, _ := execSh(`systemctl -a | grep -F 'torwrapper'`); stdout != "" {
 		fmt.Println("Torwrapper status: active")
 		return true
 	}
@@ -211,10 +206,12 @@ func isActive() bool {
 	return false
 }
 
+// restartTorService changes IP in TOR
 func restartTorService() {
 	// TODO find how to send signals to TOR service
 }
 
+// checkMyIp returns IP address via get request to ident.me
 func checkMyIp() {
 	resp, err := http.Get("https://ident.me")
 	check(err)
@@ -228,6 +225,7 @@ func checkMyIp() {
 	fmt.Printf("Your IP address: %s (according to ident.me)\n", myIp)
 }
 
+// changeDNS from default system DNS to OpenNIC
 func changeDNS() {
 	if isActive() {
 		resp, err := http.Get("https://api.opennicproject.org/geoip/?resolv")
@@ -249,11 +247,24 @@ func changeDNS() {
 	}
 }
 
+// updateBridges downloads recent private bridges from project's GitHub repo
 func updateBridges() {
 	execSh("sudo rm /etc/tor/bridges.txt")
-	execSh(DOWNLOAD_BRIDGES_CMD)
+	_, stderr := execSh(DOWNLOAD_BRIDGES_CMD)
 
-	fmt.Println("Bridges have been updated")
+	if stderr == "" {
+		fmt.Println("Bridges have been updated successfully")
+	} else {
+		fmt.Printf("Some problems occurred:\n%s", stderr)
+	}
+}
+
+// service is used as tool's availability flag
+func service() {
+	for {
+		fmt.Printf("Doin' useful job...%d", rand.Int())
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func main() {
@@ -269,12 +280,8 @@ func main() {
 		printHelp()
 	case "start":
 		start()
-	case "startservice": // service purpose only
-		startService()
 	case "stop":
 		stop()
-	case "stopservice": // service purpose only
-		stopService()
 	case "restart":
 		stop()
 		start()
@@ -289,6 +296,8 @@ func main() {
 		changeDNS()
 	case "updbridges":
 		updateBridges()
+	case "service":
+		service()
 	default:
 		fmt.Printf("Unrecognisable argument: \"%s\". Type \"torwrapper help\" for hints.\n", args[0])
 	}

@@ -13,7 +13,7 @@ apt install -yq iptables
 apt install -yq tor
 apt install -yq obfs4proxy
 
-systemctl tor start
+systemctl start tor
 
 go build -o torwrapper torwrapper.go
 cp ./torwrapper /usr/bin/torwrapper
@@ -26,4 +26,4 @@ systemctl daemon-reload
 # Bridges for TOR
 cp ./bridges.txt /etc/tor/bridges.txt
 
-echo 'Torwrapper has been installed successfully. Type \"Torwrapper help\" to see supported commands.'
+echo 'Torwrapper has been installed successfully. Type "torwrapper help" to see supported commands.'
