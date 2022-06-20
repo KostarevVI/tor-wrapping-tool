@@ -1,0 +1,16 @@
+[Unit]
+Description=Torwrapper tool
+After=network.target
+StartLimitIntervalSec=0
+Requires=tor.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=/usr/bin/torwrapper startservice
+ExecStop=/usr/bin/torwrapper stopservice
+
+[Install]
+WantedBy=multi-user.target
