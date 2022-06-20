@@ -90,9 +90,6 @@ updbridges	Update TOR bridges from the GitHub repo`)
 func start() {
 	if !isActive() {
 		// Setting-up configs and back-ups
-		// Launch service for status tracking
-		execSh("sudo systemctl start torwrapper.service")
-
 		// Updating TORRC
 		execSh(BACKUP_TORRC_CMD)
 		addTextIfAbsent("/etc/tor/torrc", TORRC_CONFIG, true)
@@ -106,6 +103,9 @@ func start() {
 		execSh(BACKUP_IPTABLES_RULES_CMD)
 		execSh(CLEAR_IPTABLES_RULES)
 		execSh(APPLY_TORWRAPPER_IPTABLES_RULES)
+
+		// Launch service for status tracking
+		execSh("sudo systemctl start torwrapper.service")
 
 		fmt.Println("Torwrapper service has been started. Connecting to TOR Network " +
 			"- if it fails, bridges would be automatically applied.\nEstimate waiting time - 30 seconds...")
