@@ -1,7 +1,6 @@
 package main
 
 import (
-	. "./constants"
 	"bytes"
 	"fmt"
 	"io"

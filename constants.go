@@ -1,4 +1,4 @@
-package constants
+package main
 
 const (
 	BACKUP_TORRC_CMD = `sudo cp -p /etc/tor/torrc /etc/tor/torrc.torwrapper.bak`

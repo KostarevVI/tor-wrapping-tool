@@ -15,7 +15,7 @@ apt install -yq obfs4proxy
 
 systemctl start tor
 
-go build -o torwrapper torwrapper.go
+go build -o torwrapper
 cp ./torwrapper /usr/bin/torwrapper
 
 # Service for tool monitoring and maintaining
