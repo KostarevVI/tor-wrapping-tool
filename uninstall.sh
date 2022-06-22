@@ -4,7 +4,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 if systemctl --all | grep -Fq 'torwrapper'; then
 	echo "Torwrapper is enabled. Stopping..."
-	systemctl stop torwrapper
+  torwrapper stop
 fi
 
 rm /etc/systemd/system/torwrapper.service

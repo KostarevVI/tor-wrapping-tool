@@ -9,6 +9,7 @@ AutomapHostsOnResolve 1
 TransPort 9040
 DNSPort 53
 ControlPort 9051
+CookieAuthentication 0
 `
 
 	BACKUP_RESOLV_CONV_CMD = `sudo cp -p /etc/resolv.conf /etc/resolv.conf.torwrapper.bak`
@@ -86,9 +87,17 @@ ip6tables-restore < /etc/iptables/rules.v6
 
 	RESTORE_TORRC_CMD = `sudo cp -p /etc/tor/torrc.torwrapper.bak /etc/tor/torrc`
 
-	DOWNLOAD_BRIDGES_CMD = `
-sudo wget https://raw.githubusercontent.com/KostarevVI/torwrapper/master/bridges.txt -O /etc/tor/bridges.txt
+	ENABLE_BRIDGES_CONFIG = `
+UseBridges 1
+ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy
 `
 
-	CHECK_TOR_CONNECTION_CMD = `sudo wget -qO- https://check.torproject.org | grep -Po "(?<=strong>)[\\d\\.]+(?=</strong)"`
+	// DOWNLOAD_BRIDGES_CMD paste here any website with auto updating bridges list
+	DOWNLOAD_BRIDGES_CMD = `
+sudo wget -qO- https://torscan-ru.ntc.party/ | grep -Po "(?<=textarea>).+(?=</textarea>) > /etc/tor/bridges.txt"
+`
+
+	CHECK_TOR_IP_CMD = `sudo wget -qO- https://check.torproject.org | grep -Po "(?<=strong>)[\\d\\.]+(?=</strong)"`
+
+	CHECK_IP_CMD = `wget -qO- https://ident.me`
 )
