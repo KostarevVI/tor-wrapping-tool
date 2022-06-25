@@ -13,7 +13,7 @@ If they don't work — visit [https://bridges.torproject.org](https://bridges.to
 and copy custom bridges to /etc/tor/bridges.txt, after which try to start the service again.
 
 ### Install
-1. `git clone https://github.com/KostarevVI/torwrapper.git'
+1. `git clone https://github.com/KostarevVI/torwrapper.git`
 2. `cd torwrapper`
 3. `sudo ./install.sh`
 
