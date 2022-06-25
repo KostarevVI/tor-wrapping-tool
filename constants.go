@@ -94,7 +94,7 @@ ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy
 
 	// DOWNLOAD_BRIDGES_CMD paste here any website with auto updating bridges list
 	DOWNLOAD_BRIDGES_CMD = `
-sudo wget -qO- https://torscan-ru.ntc.party/ | grep -Po "(?<=textarea>).+(?=</textarea>) > /etc/tor/bridges.txt"
+sudo wget -qO- https://torscan-ru.ntc.party/relays.txt
 `
 
 	CHECK_TOR_IP_CMD = `sudo wget -qO- https://check.torproject.org | grep -Po "(?<=strong>)[\\d\\.]+(?=</strong)"`

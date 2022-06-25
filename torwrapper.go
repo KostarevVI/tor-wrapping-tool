@@ -145,12 +145,12 @@ func start() {
 		fmt.Println("Connection timeout (20 seconds)\n\nTrying to connect with TOR bridges\n" +
 			"Estimate waiting time - 1 minute")
 
-		counter := 0
 		addTextIfAbsent("/etc/tor/torrc", ENABLE_BRIDGES_CONFIG, false)
 		content, err := ioutil.ReadFile("/etc/tor/bridges.txt")
 		check(err)
 		addTextIfAbsent("/etc/tor/torrc", string(content), false)
 
+		counter := 0
 		for !isConnected && counter < 3 {
 			fmt.Printf("Attempt %d of 3. Trying to connect...\n", counter+1)
 
@@ -191,7 +191,7 @@ func start() {
 		fmt.Println("\nConnection timeout (1 minute)\n" +
 			"Try to update bridges with \"torwrapper updbridges\" or " +
 			"add them manually in /etc/tor/bridges.txt from https://bridges.torproject.org\n" +
-			"Program was terminated. Please, start Torwrapper again")
+			"Service will be terminated. Please, start Torwrapper again")
 
 		// stop the service if failed to connect to the TOR network
 		stop()
@@ -308,13 +308,18 @@ func changeDNS() {
 
 // updateBridges downloads recent private bridges from project's GitHub repo
 func updateBridges() {
-	_, stderr := execSh(DOWNLOAD_BRIDGES_CMD)
+	stdout, stderr := execSh(DOWNLOAD_BRIDGES_CMD)
 
-	if stderr == "" {
-		fmt.Println("Bridges have been updated successfully")
-	} else {
-		fmt.Printf("Some problems occurred with connection to the source:\n%s", stderr)
+	if stderr != "" {
+		fmt.Printf("Some problem occurred while connecting to the source:\n%s", stderr)
+		return
 	}
+
+	bridgesRaw := strings.SplitAfter(stdout, "\n")
+	bridges := "Bridge "
+	bridges += strings.Join(bridgesRaw[:len(bridgesRaw)-1], "Bridge ")
+	addTextIfAbsent("/etc/tor/bridges.txt", bridges, true)
+	fmt.Println("Bridges have been updated successfully")
 }
 
 // service is used as tool's availability flag
