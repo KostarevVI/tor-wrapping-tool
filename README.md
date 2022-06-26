@@ -16,8 +16,7 @@ Use parameter `updbridges` if service cannot establish connection with the Tor n
 If they don't work — visit [https://bridges.torproject.org](https://bridges.torproject.org) 
 and copy custom bridges to /etc/tor/bridges.txt, after which try to start the service again.
 
-Don't try to manage Torwrapper with `systemctl start/stop/restart torwrapper` — it won't work, because the service  
-represents only the status of the tool (active/inactive) and does not perform any useful job! 
+Don't try to manage Torwrapper with `systemctl start/stop/restart torwrapper` — it won't work, because the service represents only the status of the tool (active/inactive) and does not perform any useful job! 
 
 ### Install
 1. `git clone https://github.com/KostarevVI/torwrapper.git`
