@@ -82,7 +82,7 @@ restart		Consequent launch of "stop" and "start"
 status		Check if Torwrapper is available (on/off state)
 changeid	TOR restart for identity (IP) change
 myip		Learn IP address
-dns			Change present DNS for OpenNIC DNS 
+dns		Change present DNS for OpenNIC DNS 
 updbridges	Update TOR bridges from the source web page`)
 }
 
