@@ -80,10 +80,12 @@ func printHelp() {
 stop		Stop Torwrapper and restore settings
 restart		Consequent launch of "stop" and "start"
 status		Check if Torwrapper is available (on/off state)
-changeid	TOR restart for identity (IP) change
-myip		Learn IP address
-dns		Change present DNS for OpenNIC DNS 
-updbridges	Update TOR bridges from the source web page`)
+changeid	Tor restart for identity (IP) change
+myip		Display IP address
+dns		Change present DNS to OpenNIC DNS 
+updbridges	Download available NON OBFS4 relays (from the source webpage) that can be used as Tor bridges
+
+To set custom obfs4 bridges - visit https://bridges.torproject.org (with enabled VPN, probably) and copy them to /etc/tor/bridges.txt`)
 }
 
 // start launches torwrapper service
@@ -271,7 +273,7 @@ func checkIp() {
 	torIpStdout, _ := execSh(CHECK_TOR_IP_CMD)
 	if torIpStdout != "" {
 		fmt.Printf("You are now connected to the TOR network\n"+
-			"Your IP address: %s (according to https://check.torproject.org)\n", torIpStdout[0:len(torIpStdout)-2])
+			"Your IP address: %s (according to https://check.torproject.org)\n", torIpStdout[:len(torIpStdout)-1])
 		return
 	}
 
